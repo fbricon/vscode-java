@@ -1,0 +1,166 @@
+name: javac-upload
+
+on:
+    schedule:
+      - cron: '0 */8 * * *'
+    workflow_dispatch:
+
+jobs:
+
+  should-build-change:
+    runs-on: ubuntu-latest
+    outputs:
+        repo-cache-hit: ${{ steps.cache-last-commit.outputs.cache-hit }}
+    steps:
+        - name: Checkout eclipse-jdt-core-incubator
+          uses: actions/checkout@v4
+          with:
+            repository: 'eclipse-jdtls/eclipse-jdt-core-incubator'
+            ref: 'dom-with-javac'
+            path: eclipse-jdt-core-incubator
+
+        - name: Checkout eclipse.jdt.ls
+          uses: actions/checkout@v4
+          with:
+            repository: 'eclipse-jdtls/eclipse.jdt.ls'
+            path: eclipse.jdt.ls
+
+        - name: Checkout vscode-java
+          uses: actions/checkout@v4
+          with:
+            repository: 'redhat-developer/vscode-java'
+            path: vscode-java
+
+        - name: Compute changes hash
+          run: |
+            pushd eclipse-jdt-core-incubator
+            git rev-parse HEAD >> ../lastCommit
+            popd
+            pushd eclipse.jdt.ls
+            git rev-parse HEAD >> ../lastCommit
+            popd
+            pushd vscode-java
+            git rev-parse HEAD >> ../lastCommit
+        - name: Check New Changes
+          id: cache-last-commit
+          uses: actions/cache@v4
+          with:
+            path: lastCommit
+            key: lastCommit-${{ hashFiles('lastCommit') }}
+
+  build-javac-support:
+    runs-on: ubuntu-latest
+    needs: should-build-change
+    if: ${{ needs.should-build-change.outputs.repo-cache-hit != 'true' || github.event_name != 'schedule' }}
+    steps:
+      - name: Checkout eclipse-jdt-core-incubator
+        uses: actions/checkout@v4
+        with:
+          repository: 'eclipse-jdtls/eclipse-jdt-core-incubator'
+          ref: 'dom-with-javac'
+          path: eclipse-jdt-core-incubator
+
+      - name: Checkout eclipse.jdt.ls
+        uses: actions/checkout@v4
+        with:
+          repository: 'eclipse-jdtls/eclipse.jdt.ls'
+          fetch-depth: 50
+          path: eclipse.jdt.ls
+
+      - name: Checkout vscode-java
+        uses: actions/checkout@v4
+        with:
+          repository: 'redhat-developer/vscode-java'
+          fetch-depth: 50
+          path: vscode-java
+
+      - name: Set Up Java
+        uses: oracle-actions/setup-java@v1
+        with:
+          website: jdk.java.net
+          release: 23
+
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1 # v5
+        with:
+          maven-version: 3.9.8
+
+      - name: Build JDT Core / Javac
+        run: |
+          ls -ll
+          cd eclipse-jdt-core-incubator
+          echo "INCUBATOR_SHORT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "INCUBATOR_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          mvn -pl '!org.eclipse.jdt.core.tests.builder,!org.eclipse.jdt.core.tests.compiler,!org.eclipse.jdt.core.tests.javac,!org.eclipse.jdt.core.tests.model,!org.eclipse.jdt.core.tests.performance,!org.eclipse.jdt.compiler.tool.tests,!org.eclipse.jdt.compiler.apt.tests,!org.eclipse.jdt.apt.ui,!org.eclipse.jdt.apt.tests,!org.eclipse.jdt.apt.pluggable.tests' install -DskipTests
+          cd ..
+
+      - name: Apply JDT-LS changes
+        run: |
+          git config --global user.email "vscode-java@redhat.com"
+          git config --global user.name "VS Code Java"
+          cd eclipse.jdt.ls
+          gh pr checkout https://github.com/eclipse-jdtls/eclipse.jdt.ls/pull/3123
+          git rebase master
+          cd ..
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Apply VS Code Java changes
+        run: |
+          cd vscode-java
+          gh pr checkout https://github.com/redhat-developer/vscode-java/pull/3558
+          git rebase master
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Set Up NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install NodeJS dependencies
+        run: npm install -g typescript "@vscode/vsce"
+
+      - name: Install vscode-java dependencies
+        run: |
+          pwd
+          cd vscode-java
+          npm ci
+      - name: Build JDT-LS
+        run: |
+          pwd
+          cd vscode-java
+          rm -rf ./out
+          npm run build-server
+          echo "EXT_VERSION=$(cat package.json | jq -r .version)" >> $GITHUB_ENV
+      - name: Prepare Lombok Support
+        run: |
+          pwd
+          cd vscode-java
+          npx gulp download_lombok
+      - name: Package vscode-java
+        run: |
+          pwd
+          cd vscode-java
+          npx gulp prepare_pre_release
+          vsce package --pre-release -o vscode-javac-${{ env.EXT_VERSION }}-${GITHUB_RUN_NUMBER}.vsix
+          ls -lash *.vsix
+          echo "BUILD_DATE=$(date +'%d/%m/%Y')" >> $GITHUB_ENV
+
+      - name: Publish to GH Release Tab
+        uses: "marvinpinto/action-automatic-releases@919008cf3f741b179569b7a6fb4d8860689ab7f0"
+        with:
+          repo_token: "${{secrets.GITHUB_TOKEN}}"
+          automatic_release_tag: "javac-prototype"
+          prerelease: true
+          title: "Prototype build with Javac support (${{env.BUILD_DATE}})"
+          files: |
+            vscode-java/*.vsix
+
+      - name: Update release description
+        run: |
+          cd vscode-java
+          echo -e 'Enable javac-based compilation in vscode-java with `"java.jdt.ls.javac.enabled":"on"` in your VS Code settings.\nRequires running the extension with JDK 23 (set `java.jdt.ls.java.home`).\n\nBuilt from:\n\n - jdt.core.incubator: commit [${{env.INCUBATOR_SHORT_COMMIT}}](https://github.com/eclipse-jdtls/eclipse-jdt-core-incubator/commit/${{env.INCUBATOR_COMMIT}})\n - jdt.ls: https://github.com/eclipse-jdtls/eclipse-jdt.ls/pull/3123 rebased on master\n - vscode-java:  https://github.com/redhat-developer/vscode-java/pull/3558 rebased on master' > notes.md
+          cat notes.md
+          gh -R fbricon/vscode-java release edit javac-prototype -F notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -9,8 +9,8 @@ import { Commands } from './commands';
 import { logger } from './log';
 import { checkJavaPreferences } from './settings';
 import { listJdks, sortJdksBySource, sortJdksByVersion } from './jdkUtils';
+import { getJavaConfiguration } from './utils';
 
-const REQUIRED_JDK_VERSION = 23;
 /* eslint-disable @typescript-eslint/naming-convention */
 export interface RequirementsData {
     tooling_jre: string;
@@ -35,7 +35,8 @@ interface ErrorData {
  */
 export async function resolveRequirements(context: ExtensionContext): Promise<RequirementsData> {
     let toolingJre: string = await findEmbeddedJRE(context);
-    let toolingJreVersion: number = await getMajorVersion(toolingJre);
+	let toolingJreVersion: number = await getMajorVersion(toolingJre);
+	const REQUIRED_JDK_VERSION = ('on' === getJavaConfiguration().get('jdt.ls.javac.enabled'))?23:17;
     return new Promise(async (resolve, reject) => {
         const javaPreferences = await checkJavaPreferences(context);
         const preferenceName = javaPreferences.preference;

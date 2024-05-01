@@ -127,6 +127,8 @@ function prepareParams(requirements: RequirementsData, workspacePath, context: E
 		'jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED',
 		'--add-opens',
 		'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+		'--add-opens',
+		'jdk.javadoc/jdk.javadoc.internal.doclets.formats.html.taglets.snippet=ALL-UNNAMED --add-opens jdk.javadoc/jdk.javadoc.internal.doclets.formats.html.taglets=ALL-UNNAMED',
 		'-DICompilationUnitResolver=org.eclipse.jdt.core.dom.JavacCompilationUnitResolver',
 		'-DCompilationUnit.DOM_BASED_OPERATIONS=true',
 		'-DAbstractImageBuilder.compilerFactory=org.eclipse.jdt.internal.javac.JavacCompilerFactory'
