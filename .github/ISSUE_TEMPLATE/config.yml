@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🐛 Bug Report
+    url: https://github.com/redhat-developer/vscode-java/issues/new?assignees=&labels=bug&template=bug_report.md&title=%5BBug%5D%3A+
+    about: Report an issue about editing, completion, navigation, build, etc.
+  - name: 💡 Feature Request
+    url: https://github.com/redhat-developer/vscode-java/issues/new?assignees=&labels=feature&template=feature_request.md&title=%5BFeature%5D%3A+
+    about: Suggest a new feature or improvement.
+  - name: 🧪 Issue about running or debugging unit tests
+    url: https://github.com/microsoft/vscode-java-test/issues/new
+    about: If your problem is about running or debugging unit tests, open an issue in the Test Runner for Java extension.
+  - name: 🏃‍♂️ Issue about running or debugging application code
+    url: https://github.com/microsoft/vscode-java-debug/issues/new
+    about: If your problem is about running or debugging Java application code, open an issue in the Debugger for Java extension.

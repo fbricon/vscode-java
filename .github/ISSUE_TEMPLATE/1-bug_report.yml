@@ -1,0 +1,73 @@
+name: Bug report (Language Support for Java)
+description: Report an issue with Language Support for Java (editing, completion, navigation, build, etc.)
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+type: bug
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A description of the issue
+      placeholder: Describe the issue
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: e.g. Windows 11, macOS 14
+    validations:
+      required: true
+  - type: input
+    id: jdk
+    attributes:
+      label: JDK version
+      placeholder: e.g. 17, 21
+    validations:
+      required: true
+  - type: input
+    id: vscode
+    attributes:
+      label: Visual Studio Code version
+      placeholder: e.g. 1.85.0
+    validations:
+      required: true
+  - type: input
+    id: extension
+    attributes:
+      label: Java extension version
+      placeholder: e.g. 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps To Reproduce
+      placeholder: |
+        1. step 1
+        2. step 2
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Sample project / logs
+      description: "Please attach a sample project reproducing the error and attach logs. See [Troubleshooting - enable logging](https://github.com/redhat-developer/vscode-java/wiki/Troubleshooting#enable-logging)."
+      placeholder: Link or paste relevant logs
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Result
+      placeholder: What actually happens
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Result
+      placeholder: What you expected
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      placeholder: Any other context
